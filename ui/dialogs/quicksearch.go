@@ -56,7 +56,8 @@ func (q *QuickSearch) showMenu(idx int, pos fyne.Position) {
 
 	switch cType {
 	case mediaprovider.ContentTypeTrack:
-		menu := util.NewTrackContextMenu(false, nil)
+		track := item.(*mediaprovider.Track)
+		menu := util.NewTrackContextMenu(false, q.trackNavigationMenuItems(track))
 		menu.OnPlay = func(shuffle bool) {
 			q.OnPlay(cType, id, item, shuffle)
 		}
@@ -76,10 +77,10 @@ func (q *QuickSearch) showMenu(idx int, pos fyne.Position) {
 			q.OnSetRating(id, rating)
 		}
 		menu.OnPlaySongRadio = func() {
-			q.OnPlaySongRadio(item.(*mediaprovider.Track))
+			q.OnPlaySongRadio(track)
 		}
 		menu.OnShowInfo = func() {
-			q.OnShowTrackInfo(item.(*mediaprovider.Track))
+			q.OnShowTrackInfo(track)
 		}
 		menu.OnShare = func() {
 			q.OnShare(id)
@@ -111,8 +112,66 @@ func (q *QuickSearch) showMenu(idx int, pos fyne.Position) {
 			playlist.Icon = myTheme.PlaylistIcon
 			menu.Items = append(menu.Items, playlist)
 		}
+		if cType == mediaprovider.ContentTypeAlbum {
+			if album, ok := item.(*mediaprovider.Album); ok {
+				menu.Items = append(menu.Items, fyne.NewMenuItemSeparator())
+				menu.Items = append(menu.Items, q.goToArtistMenuItem(album.ArtistIDs, album.ArtistNames))
+			}
+		}
 
 		widget.ShowPopUpMenuAtPosition(menu, canvas, pos)
+	}
+}
+
+func (q *QuickSearch) trackNavigationMenuItems(track *mediaprovider.Track) []*fyne.MenuItem {
+	return []*fyne.MenuItem{
+		q.goToArtistMenuItem(track.ArtistIDs, track.ArtistNames),
+		q.goToAlbumMenuItem(track.AlbumID),
+	}
+}
+
+func (q *QuickSearch) goToArtistMenuItem(artistIDs, artistNames []string) *fyne.MenuItem {
+	item := fyne.NewMenuItem(lang.L("Go to artist"), nil)
+	item.Icon = myTheme.ArtistIcon
+
+	var childItems []*fyne.MenuItem
+	for i, artistID := range artistIDs {
+		if artistID == "" {
+			continue
+		}
+		artistName := artistID
+		if i < len(artistNames) && artistNames[i] != "" {
+			artistName = artistNames[i]
+		}
+		childItems = append(childItems, fyne.NewMenuItem(artistName, func() {
+			q.navigateTo(mediaprovider.ContentTypeArtist, artistID)
+		}))
+	}
+
+	if len(childItems) == 0 || q.SearchDialog.OnNavigateTo == nil {
+		item.Disabled = true
+		return item
+	}
+	if len(childItems) == 1 {
+		item.Action = childItems[0].Action
+		return item
+	}
+	item.ChildMenu = fyne.NewMenu("", childItems...)
+	return item
+}
+
+func (q *QuickSearch) goToAlbumMenuItem(albumID string) *fyne.MenuItem {
+	item := fyne.NewMenuItem(lang.L("Go to album"), func() {
+		q.navigateTo(mediaprovider.ContentTypeAlbum, albumID)
+	})
+	item.Icon = myTheme.AlbumIcon
+	item.Disabled = albumID == "" || q.SearchDialog.OnNavigateTo == nil
+	return item
+}
+
+func (q *QuickSearch) navigateTo(contentType mediaprovider.ContentType, id string) {
+	if q.SearchDialog.OnNavigateTo != nil {
+		q.SearchDialog.OnNavigateTo(contentType, id)
 	}
 }
 
