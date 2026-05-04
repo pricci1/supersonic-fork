@@ -1,0 +1,52 @@
+name: Release Fork
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag to release, for example v0.21.1-fork.1'
+        required: true
+        type: string
+
+jobs:
+  release-appimage:
+    name: Release AppImage
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ github.event.inputs.tag_name || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: 'stable'
+
+      - name: Install dependencies
+        run: sudo apt update && sudo apt install -y libmpv-dev gcc libegl1-mesa-dev xorg-dev
+
+      - name: Build
+        run: make build
+
+      - name: Make AppImage
+        run: |
+          chmod +x ./scripts/appimage-build.sh
+          ./scripts/appimage-build.sh --manual-libs
+
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$RELEASE_TAG" \
+            --repo "${{ github.repository }}" \
+            --draft \
+            --title "$RELEASE_TAG" \
+            --target "$GITHUB_SHA" \
+            --generate-notes \
+            Supersonic-x86_64.AppImage
