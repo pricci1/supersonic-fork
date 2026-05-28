@@ -29,6 +29,7 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"fyne.io/systray"
 )
 
 type MainWindow struct {
@@ -434,7 +435,12 @@ func (m *MainWindow) SetupSystemTrayMenu(appName string, fyneApp fyne.App) {
 		if runtime.GOOS != "darwin" {
 			// Left-click opening systray menu instead of raising window
 			// is standard behavior on Mac.
-			desk.SetSystemTrayWindow(m.Window)
+			// Avoid desktop.App.SetSystemTrayWindow here: in this Fyne version it
+			// installs a direct systray callback that can run window Show on the
+			// systray goroutine, racing GLX context access on Linux.
+			systray.SetOnTapped(func() {
+				fyne.Do(m.Window.Show)
+			})
 		}
 		m.haveSystemTray = true
 	}
