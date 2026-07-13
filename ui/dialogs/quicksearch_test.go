@@ -3,8 +3,31 @@ package dialogs
 import (
 	"testing"
 
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/test"
 	"github.com/dweymouth/supersonic/backend/mediaprovider"
 )
+
+func TestSearchResultImageForwardsSecondaryTap(t *testing.T) {
+	app := test.NewApp()
+	defer app.Quit()
+
+	var contextMenuIndex int
+	var contextMenuPosition fyne.Position
+	parent := &SearchDialog{OnShowContextMenu: func(index int, position fyne.Position) {
+		contextMenuIndex = index
+		contextMenuPosition = position
+	}}
+	result := newSearchResult(parent)
+	result.index = 4
+	event := &fyne.PointEvent{AbsolutePosition: fyne.NewPos(10, 20)}
+
+	result.image.OnTappedSecondary(event)
+
+	if contextMenuIndex != 4 || contextMenuPosition != event.AbsolutePosition {
+		t.Fatalf("image secondary tap forwarded index %d at %v", contextMenuIndex, contextMenuPosition)
+	}
+}
 
 func TestQuickSearchTrackNavigationMenuItems(t *testing.T) {
 	var navigatedType mediaprovider.ContentType

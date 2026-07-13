@@ -254,11 +254,13 @@ func newSearchResult(parent *SearchDialog) *searchResult {
 	qs.secondary.Truncation = fyne.TextTruncateEllipsis
 	qs.ExtendBaseWidget(qs)
 	qs.imageLoader = util.NewThumbnailLoader(parent.imgSource, func(im image.Image) {
-		qs.image.SetImage(im, false)
+		qs.image.SetImage(im, true)
 	})
 	qs.imageLoader.OnBeforeLoad = func() {
 		qs.image.SetImage(nil, false)
 	}
+	qs.image.OnTapped = qs.Tapped
+	qs.image.OnTappedSecondary = qs.TappedSecondary
 
 	return qs
 }
